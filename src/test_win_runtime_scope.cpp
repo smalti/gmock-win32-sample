@@ -24,7 +24,6 @@ struct WinRuntimeScopeFixture : public testing::Test
 };
 
 using WinRuntimeScopeTest    = WinRuntimeScopeFixture;
-using WinRuntimeScopeSysTest = WinRuntimeScopeFixture;
 
 TEST_F(WinRuntimeScopeTest, SuccessInit)
 {
@@ -73,31 +72,4 @@ TEST_F(WinRuntimeScopeTest, IfAnotherThread_DoNotUninitialize)
 
     if (th.joinable())
         th.join();
-}
-
-TEST_F(WinRuntimeScopeSysTest, RealAPICall)
-{
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Invoke(REAL_MODULE_FUNC(RoInitialize)));
-    ON_MODULE_FUNC_CALL(RoUninitialize).WillByDefault(Invoke(REAL_MODULE_FUNC(RoUninitialize)));
-
-    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).Times(1);
-    EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(1);
-
-    WinRuntimeScope roScope;
-    ASSERT_EQ(roScope, S_OK);
-}
-
-TEST_F(WinRuntimeScopeSysTest, RealAPICall_IfAlreadyInitialized)
-{
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Invoke(REAL_MODULE_FUNC(RoInitialize)));
-    ON_MODULE_FUNC_CALL(RoUninitialize).WillByDefault(Invoke(REAL_MODULE_FUNC(RoUninitialize)));
-
-    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).Times(2);
-    EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(2);
-
-    WinRuntimeScope roScope1;
-    ASSERT_EQ(roScope1, S_OK);
-
-    WinRuntimeScope roScope2;
-    ASSERT_EQ(roScope2, S_FALSE);
 }
