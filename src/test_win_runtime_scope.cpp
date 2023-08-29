@@ -40,7 +40,7 @@ TEST_F(WinRuntimeScopeTest, SuccessInit_WithInitType)
     ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ S_OK }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(1);
 
-    MockFunction< WinRuntimeScope::WrongTID > wrongTIDMock;
+    MockFunction< OnWrongTID > wrongTIDMock;
     EXPECT_CALL(wrongTIDMock, Call(_)).Times(0);
 
     WinRuntimeScope roScope{ RO_INIT_MULTITHREADED, wrongTIDMock.AsStdFunction() };
@@ -61,7 +61,7 @@ TEST_F(WinRuntimeScopeTest, IfAnotherThread_DoNotUninitialize)
     ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ S_OK }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(0);
 
-    MockFunction< WinRuntimeScope::WrongTID > wrongTIDMock;
+    MockFunction< OnWrongTID > wrongTIDMock;
     EXPECT_CALL(wrongTIDMock, Call(_)).Times(1);
 
     std::unique_ptr< WinRuntimeScope > roScope{

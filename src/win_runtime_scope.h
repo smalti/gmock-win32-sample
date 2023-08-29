@@ -1,48 +1,23 @@
 #pragma once
 
+using OnWrongTID = std::function< void(DWORD) >;
+
 struct WinRuntimeScope final
 {
-    using WrongTID = std::function< void(DWORD) >;
+    WinRuntimeScope(const WinRuntimeScope&) = delete;
+    WinRuntimeScope& operator = (const WinRuntimeScope&) = delete;
 
 public:
     explicit WinRuntimeScope(
         RO_INIT_TYPE flags      = RO_INIT_SINGLETHREADED,
-        WrongTID     onWrongTID = { }
-    ) noexcept :
-        hr          { ::RoInitialize(flags) },
-        tid         { ::GetCurrentThreadId() },
-        onWrongTID  { std::move(onWrongTID) }
-    { }
+        OnWrongTID   onWrongTID = { }
+    ) noexcept;
 
-    ~WinRuntimeScope()
-    {
-        if (SUCCEEDED(hr))
-        {
-            const auto currentTid = ::GetCurrentThreadId();
-
-            if (tid == currentTid)
-            {
-                ::RoUninitialize();
-            }
-            else
-            {
-                try {
-                    if (onWrongTID)
-                        std::invoke(onWrongTID, currentTid);
-                }
-                catch (...)
-                { }
-            }
-        }
-    }
-
-    operator HRESULT() const noexcept { return hr; }
-
-    WinRuntimeScope(const WinRuntimeScope&) = delete;
-    WinRuntimeScope& operator = (const WinRuntimeScope&) = delete;
+    ~WinRuntimeScope();
+    operator HRESULT() const noexcept;
 
 private:
-    const HRESULT   hr;
-    const DWORD     tid;
-    const WrongTID  onWrongTID;
+    const HRESULT     hr;
+    const DWORD       tid;
+    const OnWrongTID  onWrongTID;
 };
