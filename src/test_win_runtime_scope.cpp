@@ -14,7 +14,7 @@ using testing::_;
 MOCK_STDCALL_FUNC(HRESULT, RoInitialize, RO_INIT_TYPE);
 MOCK_STDCALL_FUNC(void, RoUninitialize);
 
-struct WinRuntimeScopeFixture : public testing::Test
+struct WinRuntimeScopeFixture : public Test
 {
     void TearDown() override
     {
@@ -27,7 +27,7 @@ using WinRuntimeScopeTest    = WinRuntimeScopeFixture;
 
 TEST_F(WinRuntimeScopeTest, SuccessInit)
 {
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ S_OK }));
+    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).WillOnce(Return(HRESULT{ S_OK }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(1);
 
     WinRuntimeScope roScope;
@@ -36,7 +36,7 @@ TEST_F(WinRuntimeScopeTest, SuccessInit)
 
 TEST_F(WinRuntimeScopeTest, SuccessInit_WithInitType)
 {
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ S_OK }));
+    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).WillOnce(Return(HRESULT{ S_OK }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(1);
 
     MockFunction< OnWrongTID > wrongTIDMock;
@@ -46,9 +46,27 @@ TEST_F(WinRuntimeScopeTest, SuccessInit_WithInitType)
     ASSERT_EQ(roScope, S_OK);
 }
 
+TEST_F(WinRuntimeScopeTest, SuccessInit_AlreadyInitializedOnThisThread)
+{
+    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).Times(2).WillRepeatedly(
+        Invoke([&](RO_INIT_TYPE) -> HRESULT
+    {
+        static bool initialized = false;
+        return std::exchange(initialized, true) ? S_FALSE : S_OK;
+    }));
+
+    EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(2);
+
+    WinRuntimeScope roScope1;
+    WinRuntimeScope roScope2;
+
+    ASSERT_EQ(roScope1, S_OK);
+    ASSERT_EQ(roScope2, S_FALSE);
+}
+
 TEST_F(WinRuntimeScopeTest, RpcChangedMode)
 {
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ RPC_E_CHANGED_MODE }));
+    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).WillOnce(Return(HRESULT{ RPC_E_CHANGED_MODE }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(0);
 
     WinRuntimeScope roScope;
@@ -57,7 +75,7 @@ TEST_F(WinRuntimeScopeTest, RpcChangedMode)
 
 TEST_F(WinRuntimeScopeTest, IfAnotherThread_DoNotUninitialize)
 {
-    ON_MODULE_FUNC_CALL(RoInitialize, _).WillByDefault(Return(HRESULT{ S_OK }));
+    EXPECT_MODULE_FUNC_CALL(RoInitialize, _).WillOnce(Return(HRESULT{ S_OK }));
     EXPECT_MODULE_FUNC_CALL(RoUninitialize).Times(0);
 
     MockFunction< OnWrongTID > wrongTIDMock;
